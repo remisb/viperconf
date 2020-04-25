@@ -11,7 +11,7 @@ networks:
 services:
   # This starts a local PostgreSQL DB.
   db:
-    container_name: restaurant_db
+    container_name: vc_microservice_db
     networks:
       - shared-network
     image: postgres:11.1-alpine
