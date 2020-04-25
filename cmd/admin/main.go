@@ -8,6 +8,7 @@ import (
 
 const (
 	configFileName = "config"
+	envPrefix = "VC"
 )
 
 func main() {
@@ -20,6 +21,12 @@ func readConfigFile() {
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
+
+	// setup environment variables
+	viper.SetEnvPrefix(envPrefix)
+	viper.BindEnv("PORT")
+
+	envPort := viper.GetString("port")
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -36,5 +43,7 @@ func readConfigFile() {
 	dbConfig.DisableTLS = viper.GetBool("Db.DisableTLS")
 
 	log.Sugar.Infof("port: %d)", port)
+	log.Sugar.Infof("envPort: %s)", envPort)
+
 	log.Sugar.Infof("dbConfig: %v", dbConfig)
 }
