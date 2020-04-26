@@ -3,47 +3,81 @@ package main
 import (
 	"github.com/remisb/viperconf/internal/db"
 	"github.com/remisb/viperconf/internal/log"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 const (
 	configFileName = "config"
-	envPrefix = "VC"
+	envPrefix      = "vc"
 )
 
 func main() {
 	// list all command to be server by admin app
 
 	readConfigFile()
+
 }
 
 func readConfigFile() {
+
+	// setup cli flags
+	pflag.CommandLine.IntP("port", "p", 8080, "api service port")
+	pflag.String("db-name", "postgres", "Database name")
+	pflag.String("db-host", "localhost", "Database host")
+	pflag.String("db-port", "5432", "Database port")
+	pflag.String("db-user", "postgres", "Database user")
+	pflag.String("db-password", "postgres", "Database password")
+	pflag.Bool("db-disable-tls", true, "Database disable TLS")
+	pflag.Parse()
+
+	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+		log.Sugar.Errorf("bind CLI flags error: %v", err)
+	}
+
+	// setup config file variables
 	viper.SetConfigName(configFileName)
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
 	// setup environment variables
 	viper.SetEnvPrefix(envPrefix)
-	viper.BindEnv("PORT")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-	envPort := viper.GetString("port")
+	bindEnv("port")
+	bindEnv("db-host")
+	bindEnv("db-port")
+	bindEnv("db-name")
+	bindEnv("db-user")
+	bindEnv("db-password")
+	bindEnv("db-disable-tls")
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Sugar.Errorf("read config error: %s", err)
+	xPort := viper.GetInt("port")
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Sugar.Errorf("read config error: %v", err)
 	}
 
-	port := viper.GetInt("Port")
-	dbConfig := db.DbConfig{}
-	dbConfig.Name = viper.GetString("Db.Name")
-	dbConfig.Host = viper.GetString("Db.Host")
-	dbConfig.Port = viper.GetString("Db.Port")
-	dbConfig.User = viper.GetString("Db.User")
-	dbConfig.Password = viper.GetString("Db.Password")
-	dbConfig.DisableTLS = viper.GetBool("Db.DisableTLS")
+	//var dbConfig db.DbConfig
+	//viper.UnmarshalKey("Db", &dbConfig)
 
-	log.Sugar.Infof("port: %d)", port)
-	log.Sugar.Infof("envPort: %s)", envPort)
+	dbConfig := db.DbConfig{
+		Name: viper.GetString("db-name"),
+		Host: viper.GetString("db-host"),
+		Port: viper.GetString("db-port"),
+		User: viper.GetString("db-user"),
+		Password: viper.GetString("db-password"),
+		DisableTLS: viper.GetBool("db-disable-tls"),
+	}
 
-	log.Sugar.Infof("dbConfig: %v", dbConfig)
+	log.Sugar.Infof("Port: %d)", xPort)
+	log.Sugar.Infof("dbConfig: %+v", dbConfig)
+}
+
+func bindEnv(name string) {
+	if err := viper.BindEnv("name"); err != nil {
+		log.Sugar.Errorf("bind env var %s error: %v", name, err)
+	}
 }
